@@ -1,0 +1,1045 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="description" content="CSE275 — IntelliTraffic Pro Dashboard">
+    <title>IntelliTraffic Pro — CSE275</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css"/>
+    <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+    <style>
+        *,*::before,*::after { margin:0; padding:0; box-sizing:border-box; }
+
+        :root {
+            --bg: #06090f;
+            --bg2: #0c1220;
+            --surface: rgba(13, 19, 36, 0.7);
+            --card: rgba(16, 23, 44, 0.6);
+            --card-hover: rgba(22, 30, 55, 0.7);
+            --text: #e2e8f0;
+            --text2: #94a3b8;
+            --text3: #475569;
+            --blue: #60a5fa;
+            --cyan: #22d3ee;
+            --emerald: #34d399;
+            --amber: #fbbf24;
+            --rose: #fb7185;
+            --violet: #a78bfa;
+            --border: rgba(148,163,184,0.06);
+            --border2: rgba(148,163,184,0.12);
+            --topbar-h: 60px;
+            --r: 16px;
+            --rs: 10px;
+            --font: 'Inter', system-ui, -apple-system, sans-serif;
+        }
+
+        html { scroll-behavior: smooth; }
+
+        body {
+            font-family: var(--font);
+            background: var(--bg);
+            color: var(--text);
+            min-height: 100vh;
+            -webkit-font-smoothing: antialiased;
+        }
+
+        /* ═══ CANVAS BG ═══ */
+        #particleCanvas {
+            position: fixed; inset: 0; z-index: 0;
+            pointer-events: none;
+        }
+
+        .bg-aurora {
+            position: fixed; inset: 0; z-index: 0; pointer-events: none;
+            background:
+                radial-gradient(ellipse 50% 50% at 10% 20%, rgba(96,165,250,0.06), transparent),
+                radial-gradient(ellipse 40% 40% at 90% 80%, rgba(167,139,250,0.05), transparent),
+                radial-gradient(ellipse 50% 40% at 50% 50%, rgba(34,211,238,0.025), transparent);
+            animation: glow 30s ease-in-out infinite alternate;
+        }
+        @keyframes glow {
+            0% { opacity: .6; filter: hue-rotate(0deg); }
+            100% { opacity: 1; filter: hue-rotate(15deg); }
+        }
+
+        /* ═══ TOPBAR ═══ */
+        .topbar {
+            position: fixed; top: 0; left: 0; right: 0;
+            z-index: 100; height: var(--topbar-h);
+            background: rgba(6, 9, 15, 0.75);
+            backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+            border-bottom: 1px solid var(--border);
+            display: flex; align-items: center;
+            padding: 0 32px;
+        }
+
+        .topbar-inner {
+            max-width: 1500px; width: 100%; margin: 0 auto;
+            display: flex; align-items: center; justify-content: space-between;
+        }
+
+        .topbar-left {
+            display: flex; align-items: center; gap: 14px;
+        }
+
+        .topbar-logo {
+            width: 36px; height: 36px; border-radius: 10px;
+            background: linear-gradient(135deg, var(--blue), var(--violet));
+            display: flex; align-items: center; justify-content: center;
+            box-shadow: 0 0 20px rgba(96,165,250,0.2);
+        }
+
+        .topbar-brand {
+            font-size: 1.05rem; font-weight: 800;
+            letter-spacing: -.03em;
+            background: linear-gradient(135deg, #fff, #a3b8d8);
+            -webkit-background-clip: text; background-clip: text;
+            -webkit-text-fill-color: transparent;
+        }
+
+        .topbar-nav {
+            display: flex; align-items: center; gap: 4px;
+        }
+
+        .topbar-nav a {
+            text-decoration: none; color: var(--text3);
+            font-size: .78rem; font-weight: 600;
+            padding: 8px 16px; border-radius: 8px;
+            transition: all .25s;
+            letter-spacing: .01em;
+        }
+
+        .topbar-nav a:hover {
+            color: var(--text); background: rgba(255,255,255,0.04);
+        }
+
+        .topbar-nav a.active {
+            color: var(--blue); background: rgba(96,165,250,0.08);
+        }
+
+        .topbar-right {
+            display: flex; align-items: center; gap: 16px;
+        }
+
+        .live-pill {
+            display: flex; align-items: center; gap: 8px;
+            padding: 6px 16px; border-radius: 99px;
+            background: rgba(52,211,153,0.06);
+            border: 1px solid rgba(52,211,153,0.1);
+            font-size: .72rem; font-weight: 700;
+            color: var(--emerald);
+        }
+
+        .live-dot {
+            width: 7px; height: 7px; border-radius: 50%;
+            background: var(--emerald);
+            box-shadow: 0 0 8px var(--emerald);
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%,100% { box-shadow: 0 0 6px var(--emerald); }
+            50% { box-shadow: 0 0 16px var(--emerald), 0 0 32px rgba(52,211,153,0.15); }
+        }
+
+        .topbar-time {
+            font-size: .72rem; color: var(--text3);
+            font-weight: 500; font-variant-numeric: tabular-nums;
+        }
+
+        /* ═══ MAIN ═══ */
+        .main {
+            position: relative; z-index: 1;
+            max-width: 1500px; margin: 0 auto;
+            padding: calc(var(--topbar-h) + 28px) 32px 60px;
+        }
+
+        /* ═══ PAGE TITLE ═══ */
+        .page-title {
+            margin-bottom: 28px;
+            animation: fadeUp .5s ease-out;
+        }
+
+        .page-title h2 {
+            font-size: 1.35rem; font-weight: 800;
+            letter-spacing: -.03em;
+            margin-bottom: 4px;
+        }
+
+        .page-title p {
+            font-size: .78rem; color: var(--text3);
+        }
+
+        @keyframes fadeUp {
+            from { opacity: 0; transform: translateY(12px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══ GRID ═══ */
+        .grid {
+            display: grid;
+            grid-template-columns: repeat(12, 1fr);
+            gap: 18px;
+        }
+
+        .col-3 { grid-column: span 3; }
+        .col-4 { grid-column: span 4; }
+        .col-6 { grid-column: span 6; }
+        .col-8 { grid-column: span 8; }
+        .col-12 { grid-column: span 12; }
+
+        /* ═══ CARDS ═══ */
+        .card {
+            background: var(--card);
+            backdrop-filter: blur(16px);
+            border: 1px solid var(--border);
+            border-radius: var(--r);
+            padding: 22px;
+            position: relative; overflow: hidden;
+            transition: all .35s cubic-bezier(.4,0,.2,1);
+        }
+
+        .card::before {
+            content: ''; position: absolute;
+            top: 0; left: 20%; right: 20%;
+            height: 1px;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.05), transparent);
+        }
+
+        .card:hover {
+            background: var(--card-hover);
+            border-color: var(--border2);
+            transform: translateY(-2px);
+            box-shadow: 0 16px 48px rgba(0,0,0,0.3);
+        }
+
+        /* ═══ METRIC CARDS ═══ */
+        .metric { position: relative; }
+
+        .metric .glow-orb {
+            position: absolute; top: -20px; right: -20px;
+            width: 100px; height: 100px; border-radius: 50%;
+            filter: blur(45px); opacity: .1; pointer-events: none;
+            transition: opacity .4s;
+        }
+
+        .card:hover .glow-orb { opacity: .2; }
+
+        .metric .label {
+            font-size: .62rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .15em;
+            color: var(--text3); margin-bottom: 12px;
+        }
+
+        .metric .value {
+            font-size: 2.4rem; font-weight: 900;
+            letter-spacing: -.05em; line-height: 1;
+            margin-bottom: 6px;
+        }
+
+        .metric .hint {
+            font-size: .72rem; color: var(--text2);
+        }
+
+        .metric .icon {
+            position: absolute; top: 20px; right: 20px;
+            width: 32px; height: 32px; opacity: .1;
+        }
+
+        /* ═══ STATE CARD ═══ */
+        .state-value { font-size: 1.6rem !important; }
+
+        .pred-badge {
+            display: inline-flex; align-items: center; gap: 6px;
+            margin-top: 10px; padding: 5px 14px; border-radius: 8px;
+            background: rgba(96,165,250,0.06);
+            border: 1px solid rgba(96,165,250,0.08);
+            font-size: .72rem;
+        }
+
+        .pred-badge .pred-l { color: var(--text3); font-weight: 500; }
+        .pred-badge .pred-v { font-weight: 800; }
+
+        /* ═══ SECTION HEADERS ═══ */
+        .sec-h {
+            display: flex; align-items: center; gap: 10px;
+            font-size: .85rem; font-weight: 700;
+            margin-bottom: 18px; color: var(--text);
+        }
+
+        .sec-h svg { color: var(--blue); flex-shrink: 0; }
+
+        .sec-h .tag {
+            margin-left: auto; font-size: .6rem; font-weight: 700;
+            text-transform: uppercase; letter-spacing: .08em;
+            padding: 3px 10px; border-radius: 6px;
+            background: rgba(96,165,250,0.06); color: var(--blue);
+        }
+
+        /* ═══ CHARTS ═══ */
+        .chart-box { height: 220px; width: 100%; }
+
+        /* ═══ MODEL CARDS ═══ */
+        .model-row { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+
+        .model-item {
+            background: rgba(255,255,255,0.015);
+            border: 1px solid var(--border);
+            border-radius: var(--rs);
+            padding: 18px;
+            transition: all .3s;
+            position: relative;
+        }
+
+        .model-item::after {
+            content: ''; position: absolute;
+            bottom: 0; left: 0; right: 0; height: 2px;
+            border-radius: 0 0 var(--rs) var(--rs);
+            opacity: 0; transition: opacity .3s;
+        }
+
+        .model-item:first-child::after { background: linear-gradient(90deg, var(--blue), var(--cyan)); }
+        .model-item:last-child::after { background: linear-gradient(90deg, var(--violet), var(--rose)); }
+
+        .model-item:hover { background: rgba(255,255,255,0.025); }
+        .model-item:hover::after { opacity: 1; }
+
+        .model-item .m-name {
+            font-size: .76rem; font-weight: 700;
+            margin-bottom: 12px; display: flex; align-items: center; gap: 8px;
+        }
+
+        .m-dot { width: 6px; height: 6px; border-radius: 50%; display: inline-block; }
+
+        .prog-bar { height: 4px; background: rgba(255,255,255,0.03); border-radius: 99px; margin-bottom: 10px; overflow: hidden; }
+        .prog-fill { height: 100%; border-radius: 99px; transition: width 2s cubic-bezier(.16,1,.3,1); }
+
+        .acc-r { display: flex; justify-content: space-between; font-size: .68rem; color: var(--text3); }
+        .acc-r + .acc-r { margin-top: 4px; }
+
+        .opt-area {
+            margin-top: 18px; padding: 16px;
+            background: rgba(52,211,153,0.025);
+            border: 1px solid rgba(52,211,153,0.06);
+            border-radius: var(--rs);
+        }
+
+        .opt-area .o-l { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); margin-bottom: 6px; }
+        .opt-area .o-v { font-size: .85rem; font-weight: 700; color: var(--emerald); }
+        .opt-area .o-s { font-size: .68rem; color: var(--text3); margin-top: 4px; }
+
+        /* ═══ SANDBOX ═══ */
+        .sb-info { font-size: .76rem; color: var(--text3); margin-bottom: 18px; line-height: 1.6; }
+
+        .sb-fields { display: grid; grid-template-columns: repeat(3,1fr); gap: 12px; margin-bottom: 18px; }
+
+        .field { display: flex; flex-direction: column; gap: 5px; }
+        .field label {
+            font-size: .6rem; font-weight: 700; text-transform: uppercase;
+            letter-spacing: .12em; color: var(--text3);
+        }
+        .field input {
+            background: rgba(255,255,255,0.025); border: 1px solid var(--border);
+            border-radius: 8px; padding: 11px 12px;
+            color: var(--text); font-family: var(--font);
+            font-size: .85rem; font-weight: 600; outline: none;
+            transition: all .25s;
+        }
+        .field input:focus {
+            border-color: var(--blue);
+            box-shadow: 0 0 0 3px rgba(96,165,250,0.06);
+            background: rgba(96,165,250,0.03);
+        }
+
+        .btn-run {
+            width: 100%; padding: 13px; border: none;
+            border-radius: var(--rs);
+            background: linear-gradient(135deg, var(--blue), var(--violet));
+            color: #fff; font-family: var(--font);
+            font-size: .82rem; font-weight: 800;
+            cursor: pointer; position: relative; overflow: hidden;
+            transition: all .3s;
+            box-shadow: 0 4px 20px rgba(96,165,250,0.15);
+        }
+
+        .btn-run::before {
+            content: ''; position: absolute; inset: 0;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.1), transparent);
+            transform: translateX(-100%); transition: transform .5s;
+        }
+
+        .btn-run:hover { transform: translateY(-1px); box-shadow: 0 6px 28px rgba(96,165,250,0.3); }
+        .btn-run:hover::before { transform: translateX(100%); }
+        .btn-run:active { transform: scale(.98); }
+
+        .result-out {
+            margin-top: 14px; padding: 16px;
+            background: rgba(255,255,255,0.015);
+            border: 1px dashed var(--border2);
+            border-radius: var(--rs); text-align: center;
+            animation: popUp .3s ease-out;
+        }
+
+        .result-out .r-l { font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .12em; color: var(--text3); margin-bottom: 6px; }
+        .result-out .r-v { font-size: 1.3rem; font-weight: 900; }
+
+        @keyframes popUp {
+            from { opacity: 0; transform: translateY(8px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* ═══ TABLE ═══ */
+        .t-wrap { overflow-x: auto; }
+        table { width: 100%; border-collapse: collapse; }
+        th { text-align: left; padding: 10px 14px; font-size: .6rem; font-weight: 700; text-transform: uppercase; letter-spacing: .1em; color: var(--text3); border-bottom: 1px solid var(--border); }
+        td { padding: 12px 14px; font-size: .8rem; border-bottom: 1px solid var(--border); color: var(--text2); transition: all .15s; }
+        tr:last-child td { border-bottom: none; }
+        tr:hover td { background: rgba(96,165,250,0.015); color: var(--text); }
+
+        .badge { display: inline-block; padding: 2px 10px; border-radius: 99px; font-size: .58rem; font-weight: 800; text-transform: uppercase; letter-spacing: .04em; }
+        .badge-success { background: rgba(52,211,153,0.07); color: var(--emerald); }
+        .badge-warning { background: rgba(251,191,36,0.07); color: var(--amber); }
+        .badge-danger  { background: rgba(251,113,133,0.07); color: var(--rose); }
+
+        /* ═══ FOOTER ═══ */
+        .footer {
+            text-align: center; padding: 28px 0 8px;
+            font-size: .68rem; color: var(--text3);
+        }
+        .footer strong { color: var(--violet); }
+
+        /* ═══ STAGGER ═══ */
+        .grid > * { animation: cardIn .5s cubic-bezier(.16,1,.3,1) both; }
+        .grid > *:nth-child(1) { animation-delay: .03s; }
+        .grid > *:nth-child(2) { animation-delay: .06s; }
+        .grid > *:nth-child(3) { animation-delay: .09s; }
+        .grid > *:nth-child(4) { animation-delay: .12s; }
+        .grid > *:nth-child(5) { animation-delay: .17s; }
+        .grid > *:nth-child(6) { animation-delay: .22s; }
+        .grid > *:nth-child(7) { animation-delay: .27s; }
+        .grid > *:nth-child(8) { animation-delay: .32s; }
+        .grid > *:nth-child(9) { animation-delay: .37s; }
+
+        @keyframes cardIn {
+            from { opacity: 0; transform: translateY(16px) scale(.97); }
+            to { opacity: 1; transform: translateY(0) scale(1); }
+        }
+
+        /* ═══ RESPONSIVE ═══ */
+        @media (max-width: 1200px) {
+            .col-3 { grid-column: span 6; }
+            .col-4 { grid-column: span 6; }
+            .col-8 { grid-column: span 12; }
+        }
+
+        @media (max-width: 768px) {
+            .main { padding-left: 16px; padding-right: 16px; }
+            .topbar { padding: 0 16px; }
+            .topbar-nav { display: none; }
+            .col-3, .col-4, .col-6, .col-8, .col-12 { grid-column: span 12; }
+            .sb-fields { grid-template-columns: repeat(2, 1fr); }
+            .model-row { grid-template-columns: 1fr; }
+            .metric .value { font-size: 1.8rem; }
+        }
+
+        @media (max-width: 480px) {
+            .sb-fields { grid-template-columns: 1fr; }
+        }
+
+        /* ═══ LIGHT MODE ═══ */
+        body.light { --bg:#f0f2f5; --bg2:#e5e7eb; --surface:rgba(255,255,255,0.85); --card:rgba(255,255,255,0.75); --card-hover:rgba(255,255,255,0.9); --text:#1e293b; --text2:#475569; --text3:#94a3b8; --border:rgba(0,0,0,0.06); --border2:rgba(0,0,0,0.1); }
+        body.light .bg-aurora, body.light #particleCanvas { opacity: .15; }
+        body.light .topbar { background: rgba(255,255,255,0.8); }
+        body.light .topbar-brand { background: linear-gradient(135deg,#1e293b,#475569); -webkit-background-clip:text; background-clip:text; }
+
+        .theme-toggle { display:flex; align-items:center; gap:6px; cursor:pointer; }
+        .theme-toggle .t-track { width:36px; height:20px; border-radius:99px; background:rgba(148,163,184,0.15); border:1px solid var(--border2); position:relative; transition:all .3s; }
+        .theme-toggle .t-thumb { width:16px; height:16px; border-radius:50%; background:var(--blue); position:absolute; top:1px; left:1px; transition:all .3s; box-shadow:0 0 6px rgba(96,165,250,0.3); }
+        body.light .theme-toggle .t-thumb { left:17px; background:var(--amber); box-shadow:0 0 6px rgba(251,191,36,0.4); }
+        .theme-toggle .t-ico { font-size:.7rem; }
+
+        /* ═══ TOAST ═══ */
+        .toast-container { position:fixed; top:calc(var(--topbar-h)+12px); right:20px; z-index:200; display:flex; flex-direction:column; gap:8px; pointer-events:none; }
+        .toast { pointer-events:auto; padding:14px 20px; border-radius:var(--rs); background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border2); display:flex; align-items:center; gap:10px; font-size:.78rem; font-weight:600; box-shadow:0 8px 32px rgba(0,0,0,0.3); animation:toastIn .4s ease-out; min-width:280px; }
+        .toast.out { animation:toastOut .3s ease-in forwards; }
+        .toast .t-dot { width:8px; height:8px; border-radius:50%; flex-shrink:0; }
+        .toast .t-bar { position:absolute; bottom:0; left:0; height:2px; border-radius:0 0 var(--rs) var(--rs); animation:barShrink 5s linear forwards; }
+        @keyframes toastIn { from{opacity:0;transform:translateX(60px)} to{opacity:1;transform:translateX(0)} }
+        @keyframes toastOut { to{opacity:0;transform:translateX(60px)} }
+        @keyframes barShrink { from{width:100%} to{width:0} }
+
+        /* ═══ EXPORT ═══ */
+        .exp-group { position:relative; }
+        .btn-exp { padding:6px 14px; border-radius:8px; background:rgba(96,165,250,0.08); border:1px solid rgba(96,165,250,0.12); color:var(--blue); font-family:var(--font); font-size:.7rem; font-weight:700; cursor:pointer; transition:all .25s; display:flex; align-items:center; gap:5px; }
+        .btn-exp:hover { background:rgba(96,165,250,0.15); }
+        .exp-drop { display:none; position:absolute; top:100%; right:0; margin-top:6px; background:var(--card); backdrop-filter:blur(16px); border:1px solid var(--border2); border-radius:var(--rs); padding:6px; min-width:160px; box-shadow:0 12px 40px rgba(0,0,0,0.35); z-index:201; }
+        .exp-drop.show { display:block; animation:popUp .2s ease-out; }
+        .exp-drop button { width:100%; padding:9px 12px; background:none; border:none; color:var(--text); font-family:var(--font); font-size:.76rem; font-weight:600; text-align:left; border-radius:6px; cursor:pointer; transition:background .2s; }
+        .exp-drop button:hover { background:rgba(255,255,255,0.04); }
+
+        /* ═══ MAP ═══ */
+        .map-wrap { height:280px; border-radius:var(--rs); overflow:hidden; border:1px solid var(--border); }
+        .leaflet-container { background:var(--bg) !important; }
+
+        /* ═══ INTERSECTION SVG ═══ */
+        .intersection-svg { width:100%; height:260px; }
+        .road { fill:#1a2332; }
+        .lane-mark { stroke:#2a3a50; stroke-width:1; stroke-dasharray:8,6; }
+        .car { transition: transform 0.8s ease-in-out; }
+        @keyframes carMove { 0%{opacity:0} 10%{opacity:1} 90%{opacity:1} 100%{opacity:0} }
+
+        /* ═══ DATE FILTER ═══ */
+        .filter-bar { display:flex; align-items:center; gap:12px; margin-bottom:18px; padding:12px 18px; background:var(--card); border:1px solid var(--border); border-radius:var(--rs); animation:fadeUp .5s ease-out .1s both; }
+        .filter-bar label { font-size:.62rem; font-weight:700; text-transform:uppercase; letter-spacing:.1em; color:var(--text3); }
+        .filter-bar input[type="datetime-local"] { background:rgba(255,255,255,0.03); border:1px solid var(--border); border-radius:6px; padding:7px 10px; color:var(--text); font-family:var(--font); font-size:.76rem; outline:none; }
+        .filter-bar input:focus { border-color:var(--blue); }
+        .filter-bar .btn-filter { padding:7px 16px; border:none; border-radius:6px; background:var(--blue); color:#fff; font-family:var(--font); font-size:.72rem; font-weight:700; cursor:pointer; transition:all .2s; }
+        .filter-bar .btn-filter:hover { opacity:.85; }
+        .filter-bar .btn-reset { padding:7px 14px; border:1px solid var(--border); border-radius:6px; background:none; color:var(--text2); font-family:var(--font); font-size:.72rem; font-weight:600; cursor:pointer; }
+    </style>
+</head>
+<body>
+
+    <canvas id="particleCanvas"></canvas>
+    <div class="bg-aurora"></div>
+
+    <!-- ═══ TOPBAR ═══ -->
+    <nav class="topbar">
+        <div class="topbar-inner">
+            <div class="topbar-left">
+                <div class="topbar-logo">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="#fff" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M12 2v20"/><path d="m4.93 4.93 14.14 14.14"/><path d="M2 12h20"/><path d="m4.93 19.07 14.14-14.14"/>
+                    </svg>
+                </div>
+                <span class="topbar-brand">IntelliTraffic Pro</span>
+            </div>
+
+            <div class="topbar-nav">
+                <a href="#overview" class="active">Overview</a>
+                <a href="#analytics">Analytics</a>
+                <a href="#sandbox">Sandbox</a>
+                <a href="#stream">Stream</a>
+            </div>
+
+            <div class="topbar-right">
+                <div class="theme-toggle" onclick="toggleTheme()">
+                    <span class="t-ico">🌙</span>
+                    <div class="t-track"><div class="t-thumb"></div></div>
+                    <span class="t-ico">☀️</span>
+                </div>
+                <div class="exp-group">
+                    <button class="btn-exp" onclick="document.querySelector('.exp-drop').classList.toggle('show')">
+                        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>
+                        Export
+                    </button>
+                    <div class="exp-drop">
+                        <button onclick="exportCSV()">📊 Export CSV</button>
+                        <button onclick="exportPDF()">📄 Export PDF Report</button>
+                    </div>
+                </div>
+                <span class="topbar-time" id="clock">--:--:--</span>
+                <div class="live-pill">
+                    <div class="live-dot" id="statusDot"></div>
+                    <span id="statusText">Connecting…</span>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastBox"></div>
+
+    <!-- ═══ MAIN ═══ -->
+    <div class="main">
+
+        <div class="page-title" id="overview">
+            <h2>Traffic Flow Dashboard</h2>
+            <p>Multisensor analysis · KNN prediction engine · Real-time optimization</p>
+        </div>
+
+        <!-- Date Filter -->
+        <div class="filter-bar">
+            <label>From</label>
+            <input type="datetime-local" id="filterFrom">
+            <label>To</label>
+            <input type="datetime-local" id="filterTo">
+            <button class="btn-filter" onclick="applyFilter()">Apply Filter</button>
+            <button class="btn-reset" onclick="resetFilter()">Reset to Live</button>
+        </div>
+
+        <div class="grid">
+
+            <!-- ─── Metric Cards ─── -->
+            <div class="card metric col-3">
+                <div class="glow-orb" style="background:var(--cyan)"></div>
+                <p class="label">Total Volume</p>
+                <div class="value" id="totalVehicles" style="color:var(--cyan)">—</div>
+                <p class="hint">Vehicles detected</p>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="M19 17h2c.6 0 1-.4 1-1v-3c0-.9-.7-1.7-1.5-1.9C18.7 10.6 16 10 16 10s-1.3-1.4-2.2-2.3c-.5-.4-1.1-.7-1.8-.7H5c-.6 0-1.1.4-1.4.9l-1.4 2.9A3.7 3.7 0 0 0 2 12v4c0 .6.4 1 1 1h2"/><circle cx="7" cy="17" r="2"/><path d="M9 17h6"/><circle cx="17" cy="17" r="2"/></svg>
+            </div>
+
+            <div class="card metric col-3">
+                <div class="glow-orb" style="background:var(--blue)"></div>
+                <p class="label">Avg Velocity</p>
+                <div class="value" id="avgSpeed" style="color:var(--blue)">—</div>
+                <p class="hint">cm/s rolling mean</p>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><path d="m12 14 4-4"/><path d="M3.34 19a10 10 0 1 1 17.32 0"/></svg>
+            </div>
+
+            <div class="card metric col-3">
+                <div class="glow-orb" style="background:var(--violet)"></div>
+                <p class="label">Occupancy</p>
+                <div class="value" id="occupancy" style="color:var(--violet)">—</div>
+                <p class="hint">Lane fill ratio</p>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><rect width="20" height="20" x="2" y="2" rx="5"/><path d="M12 11V7M12 17v-2M8 11V9M8 17v-4M16 11V5M16 17v-4"/></svg>
+            </div>
+
+            <div class="card metric col-3" id="cardState">
+                <div class="glow-orb" style="background:var(--emerald)"></div>
+                <p class="label">System State</p>
+                <div class="value state-value" id="trafficState">—</div>
+                <div id="predictionBadge" class="pred-badge" style="display:none">
+                    <span class="pred-l">Next →</span>
+                    <span class="pred-v" id="predictedState">—</span>
+                </div>
+                <p class="hint" style="margin-top:8px">ML intelligence estimate</p>
+                <svg class="icon" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5"><polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/></svg>
+            </div>
+
+            <!-- ─── Charts ─── -->
+            <div class="card col-8" id="analytics">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 3v18h18"/><path d="m19 9-5 5-4-4-3 3"/></svg>
+                    Flow Performance
+                    <span class="tag">Live</span>
+                </div>
+                <div class="chart-box"><canvas id="chartFlow"></canvas></div>
+            </div>
+
+            <div class="card col-4">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20v-6M6 20V10M18 20V4"/></svg>
+                    State Timeline
+                </div>
+                <div class="chart-box"><canvas id="chartStates"></canvas></div>
+            </div>
+
+            <!-- ─── Analytics + Sandbox ─── -->
+            <div class="card col-6">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="10"/><path d="m8 12 3 3 5-5"/></svg>
+                    Predictive Analytics
+                    <span class="tag">KNN + DT</span>
+                </div>
+                <div class="model-row">
+                    <div class="model-item">
+                        <p class="m-name"><span class="m-dot" style="background:var(--blue)"></span>K-Nearest Neighbors</p>
+                        <div class="prog-bar"><div class="prog-fill" style="width:87.5%;background:linear-gradient(90deg,var(--blue),var(--cyan))"></div></div>
+                        <div class="acc-r"><span>Test Accuracy</span><span style="color:var(--text);font-weight:700">87.5%</span></div>
+                        <div class="acc-r"><span>Train Accuracy</span><span>87.0%</span></div>
+                    </div>
+                    <div class="model-item">
+                        <p class="m-name"><span class="m-dot" style="background:var(--violet)"></span>Decision Tree</p>
+                        <div class="prog-bar"><div class="prog-fill" style="width:75%;background:linear-gradient(90deg,var(--violet),var(--rose))"></div></div>
+                        <div class="acc-r"><span>Test Accuracy</span><span style="color:var(--text);font-weight:700">75.0%</span></div>
+                        <div class="acc-r"><span>Train Accuracy</span><span>100%</span></div>
+                    </div>
+                </div>
+                <div class="opt-area">
+                    <p class="o-l">Suggested Optimization</p>
+                    <p class="o-v" id="optSplit">Loading…</p>
+                    <p class="o-s">Variance reduction: <span id="optReduction" style="color:var(--emerald);font-weight:700">—</span></p>
+                </div>
+            </div>
+
+            <div class="card col-6" id="sandbox">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m15 12-8.373 8.373a1 1 0 1 1-3-3L12 9"/><path d="m18 15 4-4"/><path d="m21.5 11.5-1.914-1.914A2 2 0 0 1 19 8.172V7l-2.26-2.26a6 6 0 0 0-4.202-1.756L9 2.96l.92.82A6.18 6.18 0 0 1 12 8.4V10l2 2h1.172a2 2 0 0 1 1.414.586L18.5 14.5"/></svg>
+                    Intelligence Sandbox
+                    <span class="tag">Manual</span>
+                </div>
+                <p class="sb-info">Input custom traffic parameters to test how the KNN model classifies different scenarios.</p>
+                <div class="sb-fields">
+                    <div class="field"><label>Vehicle Count</label><input type="number" id="testVehicles" value="5"></div>
+                    <div class="field"><label>Avg Speed</label><input type="number" id="testSpeed" value="50"></div>
+                    <div class="field"><label>Std Dev</label><input type="number" id="testStd" value="5"></div>
+                    <div class="field"><label>Avg Distance</label><input type="number" id="testDist" value="120"></div>
+                    <div class="field"><label>Occupancy</label><input type="number" id="testOcc" step="0.1" value="0.3"></div>
+                    <div class="field"><label>Flow Rate</label><input type="number" id="testFlow" value="10"></div>
+                </div>
+                <button onclick="manualPredict()" class="btn-run">⚡ Analyze Scenario</button>
+                <div id="sandboxResult" class="result-out" style="display:none">
+                    <p class="r-l">Classification Result</p>
+                    <p class="r-v" id="manualResult">—</p>
+                </div>
+            </div>
+
+            <!-- ─── Map ─── -->
+            <div class="card col-6" id="mapSection">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 10c0 6-8 12-8 12s-8-6-8-12a8 8 0 0 1 16 0Z"/><circle cx="12" cy="10" r="3"/></svg>
+                    Intersection Map
+                    <span class="tag">Geo</span>
+                </div>
+                <div class="map-wrap" id="leafletMap"></div>
+            </div>
+
+            <!-- ─── Intersection SVG ─── -->
+            <div class="card col-6">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="18" x="3" y="3" rx="2"/><path d="M3 12h18M12 3v18"/></svg>
+                    Live Intersection
+                    <span class="tag" id="intState">Free-Flow</span>
+                </div>
+                <svg class="intersection-svg" id="intSvg" viewBox="0 0 400 260">
+                    <!-- Roads -->
+                    <rect class="road" x="0" y="100" width="400" height="60"/>
+                    <rect class="road" x="170" y="0" width="60" height="260"/>
+                    <!-- Lane markings -->
+                    <line class="lane-mark" x1="0" y1="130" x2="170" y2="130"/>
+                    <line class="lane-mark" x1="230" y1="130" x2="400" y2="130"/>
+                    <line x1="200" y1="0" x2="200" y2="100" class="lane-mark"/>
+                    <line x1="200" y1="160" x2="200" y2="260" class="lane-mark"/>
+                    <!-- Traffic lights -->
+                    <circle id="lightH" cx="165" cy="95" r="6" fill="#34d399"/>
+                    <circle id="lightV" cx="235" cy="165" r="6" fill="#fb7185"/>
+                    <!-- Cars (horizontal) -->
+                    <g id="carsH"></g>
+                    <!-- Cars (vertical) -->
+                    <g id="carsV"></g>
+                </svg>
+            </div>
+
+            <!-- ─── Sensor Stream ─── -->
+            <div class="card col-12" id="stream">
+                <div class="sec-h">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="3" rx="2"/><line x1="8" x2="16" y1="21" y2="21"/><line x1="12" x2="12" y1="17" y2="21"/></svg>
+                    Sensor Data Stream
+                    <span class="tag">Real-time</span>
+                </div>
+                <div class="t-wrap">
+                    <table>
+                        <thead><tr><th>Sample</th><th>Lane</th><th>Detection</th><th>Distance</th><th>Speed</th><th>State</th></tr></thead>
+                        <tbody id="feedBody"><tr><td colspan="6" style="text-align:center;padding:36px;color:var(--text3)">Awaiting sensor data…</td></tr></tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <footer class="footer">Built with 🧠 for <strong>CSE275</strong> — Multisensor Traffic Flow Analysis & Congestion Optimization</footer>
+    </div>
+
+    <!-- ═══ SCRIPTS ═══ -->
+    <script src="https://cdn.jsdelivr.net/npm/chart.js@4/dist/chart.umd.min.js"></script>
+    <script>
+    // ═══ PARTICLES ═══
+    (() => {
+        const c = document.getElementById('particleCanvas'), x = c.getContext('2d');
+        let W, H; const P = [];
+        function resize() { W = c.width = innerWidth; H = c.height = innerHeight; }
+        resize(); addEventListener('resize', resize);
+        for (let i = 0; i < 50; i++) P.push({ x: Math.random()*W, y: Math.random()*H, r: Math.random()*1.2+.3, dx: (Math.random()-.5)*.25, dy: (Math.random()-.5)*.25, o: Math.random()*.25+.04 });
+        (function loop() {
+            x.clearRect(0,0,W,H);
+            for (const p of P) {
+                p.x += p.dx; p.y += p.dy;
+                if (p.x<0) p.x=W; if (p.x>W) p.x=0;
+                if (p.y<0) p.y=H; if (p.y>H) p.y=0;
+                x.beginPath(); x.arc(p.x,p.y,p.r,0,Math.PI*2);
+                x.fillStyle = `rgba(148,163,184,${p.o})`; x.fill();
+            }
+            for (let i=0;i<P.length;i++) for (let j=i+1;j<P.length;j++) {
+                const d = Math.hypot(P[i].x-P[j].x, P[i].y-P[j].y);
+                if (d<130) { x.beginPath(); x.moveTo(P[i].x,P[i].y); x.lineTo(P[j].x,P[j].y); x.strokeStyle=`rgba(96,165,250,${.025*(1-d/130)})`; x.lineWidth=.5; x.stroke(); }
+            }
+            requestAnimationFrame(loop);
+        })();
+    })();
+
+    // ═══ CLOCK ═══
+    setInterval(() => {
+        const d = new Date();
+        document.getElementById('clock').textContent = d.toLocaleTimeString('en-US', { hour12: false });
+    }, 1000);
+
+    // ═══ NAV SCROLL ═══
+    document.querySelectorAll('.topbar-nav a').forEach(a => {
+        a.addEventListener('click', e => {
+            document.querySelectorAll('.topbar-nav a').forEach(x => x.classList.remove('active'));
+            a.classList.add('active');
+        });
+    });
+
+    // ═══ CHARTS ═══
+    const API = "http://localhost:5000/api", POLL = 2000, MAX = 30;
+    Chart.defaults.color = '#475569';
+    Chart.defaults.font.family = "'Inter',sans-serif";
+    Chart.defaults.font.size = 10;
+
+    const cF = new Chart(document.getElementById("chartFlow"), {
+        type:"line",
+        data:{ labels:[], datasets:[
+            { label:"Speed", data:[], borderColor:"#60a5fa", backgroundColor:"rgba(96,165,250,0.05)", fill:true, tension:.45, borderWidth:2, pointRadius:0 },
+            { label:"Volume", data:[], borderColor:"#22d3ee", backgroundColor:"rgba(34,211,238,0.04)", fill:true, tension:.45, borderWidth:2, pointRadius:0 }
+        ]},
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales:{ x:{display:false}, y:{ grid:{color:'rgba(148,163,184,0.03)'}, border:{display:false} } },
+            interaction:{ intersect:false, mode:'index' }
+        }
+    });
+
+    const cS = new Chart(document.getElementById("chartStates"), {
+        type:"bar",
+        data:{ labels:[], datasets:[{data:[],backgroundColor:[],borderRadius:5,borderSkipped:false}] },
+        options:{ responsive:true, maintainAspectRatio:false, plugins:{legend:{display:false}},
+            scales:{ x:{display:false}, y:{ min:0,max:3,
+                ticks:{callback:v=>["","Free","Mod","Congest"][v]||""},
+                grid:{color:'rgba(148,163,184,0.03)'}, border:{display:false}
+            }}
+        }
+    });
+
+    const SC = {
+        0:{name:"Free-Flow",class:"badge-success",color:"#34d399"},
+        1:{name:"Moderate",class:"badge-warning",color:"#fbbf24"},
+        2:{name:"Congested",class:"badge-danger",color:"#fb7185"}
+    };
+
+    let sB=[],fB=[],stB=[],lB=[];
+
+    async function tick(){
+        try{
+            const [dR,pR]=await Promise.all([fetch(`${API}/sensor-data?limit=20`),fetch(`${API}/predict`).catch(()=>null)]);
+            if(!dR.ok)throw 0;
+            const j=await dR.json();
+            document.getElementById("statusText").textContent="System Live";
+            document.getElementById("statusDot").style.background="var(--emerald)";
+            if(j.data?.length)proc(j.data);
+            if(pR?.ok)predUI(await pR.json());
+        }catch{
+            document.getElementById("statusText").textContent="Simulation";
+            document.getElementById("statusDot").style.background="var(--amber)";
+            sim();
+        }
+    }
+
+    function predUI(j){
+        const b=document.getElementById("predictionBadge"),s=document.getElementById("predictedState");
+        if(j.prediction_name){b.style.display="inline-flex";s.textContent=j.prediction_name;s.style.color=SC[j.prediction_code]?.color||'#60a5fa';}
+        else b.style.display="none";
+    }
+
+    function proc(d){
+        const cnt=d.filter(x=>(x.ir_detected||x.ir)===1).length;
+        const avg=(d.reduce((a,b)=>a+(b.speed_cm_s||0),0)/d.length).toFixed(1);
+        const occ=(cnt/d.length).toFixed(2);
+        const st=occ>0.6?2:occ>0.3?1:0;
+        anim("totalVehicles",cnt);
+        document.getElementById("avgSpeed").textContent=avg;
+        document.getElementById("occupancy").textContent=occ;
+        const el=document.getElementById("trafficState");
+        el.textContent=SC[st].name; el.style.color=SC[st].color;
+
+        document.getElementById("feedBody").innerHTML=d.slice(0,8).map((r,i)=>`<tr>
+            <td style="font-weight:700;color:var(--text)">#${r.sample||r.id||i}</td>
+            <td>Lane ${r.lane||r.lane_id||1}</td>
+            <td>${(r.ir||r.ir_detected)?'<span style="color:var(--cyan)">● Detected</span>':'<span style="color:var(--text3)">—</span>'}</td>
+            <td>${(r.dist_cm||r.distance_cm||0).toFixed(0)} cm</td>
+            <td>${(r.speed_cm_s||0).toFixed(1)} cm/s</td>
+            <td><span class="badge ${SC[(r.ir||r.ir_detected)?2:0].class}">${SC[(r.ir||r.ir_detected)?2:0].name}</span></td>
+        </tr>`).join('');
+        charts(d);
+    }
+
+    function anim(id,end){
+        const el=document.getElementById(id);
+        const start=parseInt(el.textContent)||0;
+        if(start===end)return;
+        const dur=500,t0=performance.now();
+        (function f(now){
+            const p=Math.min((now-t0)/dur,1);
+            el.textContent=Math.round(start+(end-start)*(1-Math.pow(1-p,3)));
+            if(p<1)requestAnimationFrame(f);
+        })(t0);
+    }
+
+    function charts(d){
+        const rev = [...d].reverse().slice(-MAX);
+        cF.data.labels = rev.map(() => '');
+        cF.data.datasets[0].data = rev.map(r => r.speed_cm_s || 0);
+        cF.data.datasets[1].data = rev.map(r => (r.ir || r.ir_detected) ? 80 : 20);
+        cF.update('none');
+
+        const states = rev.map(r => {
+            const o = (r.ir || r.ir_detected) ? 0.8 : 0.2;
+            return (o>0.7?2:o>0.4?1:0)+1;
+        });
+        cS.data.labels = rev.map(() => '');
+        cS.data.datasets[0].data = states;
+        cS.data.datasets[0].backgroundColor = states.map(s => SC[s-1]?.color||'#475569');
+        cS.update('none');
+    }
+
+    function sim(){
+        const m=Array.from({length:20},(_,i)=>({sample:100+i,ir:Math.random()>.7?1:0,speed_cm_s:40+Math.random()*40,dist_cm:100+Math.random()*100}));
+        proc(m); predUI({prediction_code:Math.floor(Math.random()*3),prediction_name:"Moderate (Sim)"});
+    }
+
+    async function loadOpt(){
+        try{const r=await fetch("../data/optimization_summary.json");const o=await r.json();
+        document.getElementById("optReduction").textContent=o.reduction_pct.toFixed(1)+"%";
+        const t=o.optimal_green_times_sec.map(x=>x.toFixed(0)+"s");
+        document.getElementById("optSplit").textContent=`Signal Split: Phase A: ${t[0]} / Phase B: ${t[1]}`;}catch{}
+    }
+
+    async function manualPredict(){
+        const data={vehicle_count:+document.getElementById("testVehicles").value,avg_speed:+document.getElementById("testSpeed").value,std_speed:+document.getElementById("testStd").value,avg_distance:+document.getElementById("testDist").value,occupancy_ratio:+document.getElementById("testOcc").value,flow_rate:+document.getElementById("testFlow").value};
+        const rd=document.getElementById("sandboxResult"),rt=document.getElementById("manualResult");
+        try{const r=await fetch(`${API}/predict/manual`,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)});
+        if(!r.ok)throw 0;const j=await r.json();rd.style.display="block";rt.textContent=j.prediction_name;rt.style.color=SC[j.prediction_code]?.color||'#60a5fa';
+        }catch{rd.style.display="block";rt.textContent="Server Offline";rt.style.color="var(--rose)";}
+    }
+
+    setInterval(tick,POLL); tick(); loadOpt();
+
+    // ═══ THEME TOGGLE ═══
+    function toggleTheme() {
+        document.body.classList.toggle('light');
+        localStorage.setItem('theme', document.body.classList.contains('light') ? 'light' : 'dark');
+    }
+    if (localStorage.getItem('theme') === 'light') document.body.classList.add('light');
+
+    // ═══ TOAST SYSTEM ═══
+    let lastToastState = null;
+    function showToast(msg, color) {
+        const box = document.getElementById('toastBox');
+        const t = document.createElement('div');
+        t.className = 'toast';
+        t.innerHTML = `<div class="t-dot" style="background:${color}"></div><span>${msg}</span><div class="t-bar" style="background:${color}"></div>`;
+        box.appendChild(t);
+        setTimeout(() => { t.classList.add('out'); setTimeout(() => t.remove(), 300); }, 5000);
+    }
+    // Hook into proc to detect state changes
+    const origProc = proc;
+    proc = function(d) {
+        origProc(d);
+        const cnt = d.filter(x => (x.ir_detected||x.ir)===1).length;
+        const occ = cnt/d.length;
+        const st = occ>0.6?2:occ>0.3?1:0;
+        if (lastToastState !== null && st !== lastToastState) {
+            if (st === 2) showToast('⚠️ High congestion detected — optimizing signals', '#fb7185');
+            else if (st === 0 && lastToastState === 2) showToast('✅ Congestion cleared — returning to normal', '#34d399');
+            else if (st === 1) showToast('🔶 Moderate traffic — monitoring closely', '#fbbf24');
+        }
+        lastToastState = st;
+        updateIntersection(st);
+        updateMapMarker(st);
+    };
+
+    // ═══ EXPORT CSV ═══
+    function exportCSV() {
+        document.querySelector('.exp-drop').classList.remove('show');
+        const rows = document.querySelectorAll('#feedBody tr');
+        let csv = 'Sample,Lane,Detection,Distance,Speed,State\n';
+        rows.forEach(r => {
+            const cells = r.querySelectorAll('td');
+            if (cells.length >= 6) csv += Array.from(cells).map(c => c.textContent.trim()).join(',') + '\n';
+        });
+        const blob = new Blob([csv], {type:'text/csv'});
+        const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+        a.download = `intellitraffic_${new Date().toISOString().slice(0,10)}.csv`;
+        a.click();
+        showToast('📊 CSV exported successfully', '#60a5fa');
+    }
+
+    // ═══ EXPORT PDF ═══
+    function exportPDF() {
+        document.querySelector('.exp-drop').classList.remove('show');
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF();
+        doc.setFontSize(18); doc.text('IntelliTraffic Pro — Report', 14, 20);
+        doc.setFontSize(10); doc.text(`Generated: ${new Date().toLocaleString()}`, 14, 28);
+        doc.setFontSize(12); doc.text('Current Metrics', 14, 40);
+        doc.setFontSize(10);
+        doc.text(`Volume: ${document.getElementById('totalVehicles').textContent}`, 14, 48);
+        doc.text(`Avg Speed: ${document.getElementById('avgSpeed').textContent} cm/s`, 14, 55);
+        doc.text(`Occupancy: ${document.getElementById('occupancy').textContent}`, 14, 62);
+        doc.text(`State: ${document.getElementById('trafficState').textContent}`, 14, 69);
+        doc.setFontSize(12); doc.text('Model Performance', 14, 82);
+        doc.setFontSize(10);
+        doc.text('KNN Test Accuracy: 87.5%', 14, 90);
+        doc.text('Decision Tree Test Accuracy: 75.0%', 14, 97);
+        doc.text(`Optimization: ${document.getElementById('optSplit').textContent}`, 14, 104);
+        doc.save(`intellitraffic_report_${new Date().toISOString().slice(0,10)}.pdf`);
+        showToast('📄 PDF report downloaded', '#a78bfa');
+    }
+
+    // Close export dropdown when clicking outside
+    document.addEventListener('click', e => { if (!e.target.closest('.exp-group')) document.querySelector('.exp-drop').classList.remove('show'); });
+
+    // ═══ LEAFLET MAP ═══
+    const map = L.map('leafletMap',{zoomControl:false}).setView([28.6139,77.209],14);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png',{attribution:'©CartoDB',maxZoom:19}).addTo(map);
+    const mapMarker = L.circleMarker([28.6139,77.209],{radius:12,fillColor:'#34d399',color:'#34d399',weight:2,opacity:0.8,fillOpacity:0.3}).addTo(map);
+    mapMarker.bindPopup('<b>Sensor Node 1</b><br>Status: Free-Flow');
+    function updateMapMarker(st) {
+        const c = SC[st]?.color||'#34d399';
+        mapMarker.setStyle({fillColor:c, color:c});
+        mapMarker.setPopupContent(`<b>Sensor Node 1</b><br>Status: ${SC[st]?.name||'Unknown'}`);
+    }
+    setTimeout(() => map.invalidateSize(), 500);
+
+    // ═══ INTERSECTION ANIMATION ═══
+    let intAnimFrame = 0;
+    function updateIntersection(st) {
+        const tag = document.getElementById('intState');
+        tag.textContent = SC[st]?.name||'Unknown';
+        tag.style.color = SC[st]?.color;
+        const lH = document.getElementById('lightH'), lV = document.getElementById('lightV');
+        lH.setAttribute('fill', st===2?'#fb7185':'#34d399');
+        lV.setAttribute('fill', st===2?'#34d399':'#fb7185');
+        drawCars(st);
+    }
+    function drawCars(st) {
+        const hG = document.getElementById('carsH'), vG = document.getElementById('carsV');
+        const speed = st===0?'fast':st===1?'med':'slow';
+        const gap = speed==='fast'?55:speed==='med'?40:25;
+        const count = speed==='fast'?4:speed==='med'?6:8;
+        let hHTML='', vHTML='';
+        for (let i=0;i<count;i++) {
+            const x = 10+i*gap, c = st===2?'#fb7185':st===1?'#fbbf24':'#34d399';
+            hHTML+=`<rect x="${x}" y="112" width="18" height="10" rx="3" fill="${c}" opacity="0.7"><animate attributeName="x" from="-20" to="420" dur="${speed==='fast'?'3s':speed==='med'?'5s':'8s'}" begin="${i*0.4}s" repeatCount="indefinite"/></rect>`;
+        }
+        for (let i=0;i<Math.floor(count/2);i++) {
+            const y = 10+i*gap, c = st===2?'#fb7185':'#60a5fa';
+            vHTML+=`<rect x="182" y="${y}" width="10" height="18" rx="3" fill="${c}" opacity="0.5"><animate attributeName="y" from="-20" to="280" dur="${speed==='fast'?'4s':'7s'}" begin="${i*0.6}s" repeatCount="indefinite"/></rect>`;
+        }
+        hG.innerHTML = hHTML; vG.innerHTML = vHTML;
+    }
+    drawCars(0);
+
+    // ═══ DATE FILTER ═══
+    let filterMode = false;
+    function applyFilter() {
+        const from = document.getElementById('filterFrom').value;
+        const to = document.getElementById('filterTo').value;
+        if (!from || !to) { showToast('⚠️ Please select both dates', '#fbbf24'); return; }
+        filterMode = true;
+        showToast('📅 Showing historical data', '#60a5fa');
+        fetch(`${API}/sensor-data/all`).then(r=>r.json()).then(j=>{
+            const filtered = (j.data||[]).filter(r=>{
+                const ts = r.server_ts||r.timestamp||'';
+                return ts >= from && ts <= to;
+            });
+            if(filtered.length) proc(filtered);
+            else showToast('No data found for selected range','#fb7185');
+        }).catch(()=>showToast('Filter error','#fb7185'));
+    }
+    function resetFilter() { filterMode = false; showToast('🔄 Switched back to live mode', '#34d399'); }
+    </script>
+</body>
+</html>

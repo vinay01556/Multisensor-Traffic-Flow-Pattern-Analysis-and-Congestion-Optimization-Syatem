@@ -1,0 +1,28 @@
+# Byte-compiled / optimized / DLL files
+__pycache__/
+*.py[cod]
+*$py.class
+
+# Data and Logs
+backend/traffic_data.db
+logs/*.log
+data/*.pkl
+data/*.json
+
+# Environment variables
+.env
+
+# IDE / System files
+.vscode/
+.idea/
+.gemini/
+.agents/
+.agent/
+_agents/
+_agent/
+*.swp
+*.swo
+
+# Project specific
+tmp/
+node_modules/
