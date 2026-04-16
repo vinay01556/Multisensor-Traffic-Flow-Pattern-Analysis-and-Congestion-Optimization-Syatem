@@ -1,5 +1,5 @@
 """
-IntelliTraffic Pro — Traffic Database Module
+IntelliTraffic Pro - Traffic Database Module
 Stores sensor readings in SQLite + exports to CSV.
 """
 

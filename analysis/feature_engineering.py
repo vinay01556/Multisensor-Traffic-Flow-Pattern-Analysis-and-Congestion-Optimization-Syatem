@@ -1,8 +1,5 @@
 """
-IntelliTraffic Pro — Feature Engineering Module
-
-Extracts time-windowed traffic features from raw sensor readings
-for use in clustering and prediction.
+IntelliTraffic Pro - Feature Engineering Module
 
 Features per window:
   - vehicle_count      : Total IR detections

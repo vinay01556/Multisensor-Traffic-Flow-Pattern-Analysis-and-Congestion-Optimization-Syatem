@@ -1,8 +1,5 @@
 """
-IntelliTraffic Pro — Trajectory Variance Optimization Module
-
-Objective: Minimize the variance of vehicle travel times (trajectory variance)
-across traffic windows by optimizing green-light durations.
+IntelliTraffic Pro - Trajectory Variance Optimization Module
 
 Approach:
   - Model travel time as a function of green-light split ratios

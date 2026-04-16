@@ -1,5 +1,5 @@
 """
-IntelliTraffic Pro — Clustering Module
+IntelliTraffic Pro - Clustering Module
 
 Applies K-Means and DBSCAN to traffic feature vectors to
 identify traffic states:

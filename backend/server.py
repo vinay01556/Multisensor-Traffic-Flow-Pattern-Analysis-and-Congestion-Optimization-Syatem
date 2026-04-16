@@ -1,10 +1,11 @@
-IntelliTraffic Pro — Advanced Traffic Intelligence
+"""
+IntelliTraffic Pro - Advanced Traffic Intelligence
 Backend Server (Flask)
 
 Endpoints:
-  POST /api/sensor-data   — Receive JSON sensor readings from ESP32
-  GET  /api/sensor-data    — Retrieve stored readings (with optional ?limit=N)
-  GET  /api/status         — Health check
+  POST /api/sensor-data   - Receive JSON sensor readings from ESP32
+  GET  /api/sensor-data    - Retrieve stored readings (with optional ?limit=N)
+  GET  /api/status         - Health check
 """
 
 from flask import Flask, request, jsonify
@@ -39,7 +40,12 @@ if os.path.exists(MODEL_PATH):
 
 @app.route("/api/predict", methods=["GET"])
 def predict_congestion():
-    """Predict the next traffic state using a window of recent readings."""
+    """
+    IntelliTraffic Pro - Congestion Prediction Module
+
+    Uses a sliding window of recent traffic states to predict
+    the upcoming congestion level using KNN / Decision Tree.
+    """
     if not knn_model:
         return jsonify({"error": "Model not loaded"}), 503
 
