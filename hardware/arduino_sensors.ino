@@ -1,5 +1,5 @@
 /*
- * CSE275 — Multisensor Traffic Flow Analysis
+ * IntelliTraffic Pro — Multisensor Traffic Flow Analysis
  * Arduino Sensor Sketch
  * 
  * Hardware:

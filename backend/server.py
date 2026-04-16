@@ -1,5 +1,4 @@
-"""
-CSE275 — Multisensor Traffic Flow Analysis
+IntelliTraffic Pro — Advanced Traffic Intelligence
 Backend Server (Flask)
 
 Endpoints:
@@ -164,7 +163,7 @@ if __name__ == "__main__":
     env = os.getenv("FLASK_ENV", "development")
     
     log.info("=" * 50)
-    log.info(" CSE275 Traffic Sensor Backend")
+    log.info(" IntelliTraffic Pro - Smart Traffic Intelligence")
     log.info(f" Starting at {datetime.datetime.now().isoformat()} in {env} mode")
     log.info("=" * 50)
     

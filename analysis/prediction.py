@@ -1,5 +1,5 @@
 """
-CSE275 — Congestion Prediction Module
+IntelliTraffic Pro — Congestion Prediction Module
 
 Uses a sliding window of recent traffic states to predict
 the upcoming congestion level using KNN / Decision Tree.

@@ -1,5 +1,5 @@
 /*
- * CSE275 — Multisensor Traffic Flow Analysis
+ * IntelliTraffic Pro — Multisensor Traffic Flow Analysis
  * ESP32 WiFi Gateway
  *
  * Reads JSON sensor data from Arduino over Serial2,

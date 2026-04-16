@@ -1,5 +1,5 @@
 """
-CSE275 — Trajectory Variance Optimization Module
+IntelliTraffic Pro — Trajectory Variance Optimization Module
 
 Objective: Minimize the variance of vehicle travel times (trajectory variance)
 across traffic windows by optimizing green-light durations.

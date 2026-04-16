@@ -1,5 +1,5 @@
 """
-CSE275 — Feature Engineering Module
+IntelliTraffic Pro — Feature Engineering Module
 
 Extracts time-windowed traffic features from raw sensor readings
 for use in clustering and prediction.
