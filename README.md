@@ -4,8 +4,8 @@ A production-grade, real-time traffic monitoring and optimization system using *
 
 ---
 
-## ✨ New Premium Features
-*   **Production-Ready Backend:** Hardened with `Waitress` WSGI server and structured logging.
+## ✨ Features
+*   **FastAPI Backend:** High-performance ASGI server with auto-generated Swagger docs.
 *   **Ultra-Premium Dashboard:** Glassmorphic UI with animated data visualizations and live ML sync.
 *   **Interactive Mapping:** Real-time geospatial visualization of sensor nodes using Leaflet.js.
 *   **Digital Twin Intersection:** Animated SVG representation of live traffic flow and signal states.
@@ -22,7 +22,7 @@ IntelliTrafficPro/
 │   ├── arduino_sensors.ino     ← IR + ultrasonic sensor reading
 │   └── esp32_wifi.ino          ← WiFi gateway (forwards data to server)
 ├── backend/
-│   ├── server.py               ← Production Flask API (Waitress)
+│   ├── server.py               ← FastAPI + Uvicorn ASGI server
 │   ├── database.py             ← SQLite storage + CSV export
 │   ├── logger.py               ← Centralized rotating file logging
 │   └── config.py               ← Environment-based configuration
@@ -56,21 +56,66 @@ IntelliTrafficPro/
 
 ---
 
-## 🚀 Deployment
+## 🚀 Getting Started
 
-### 1. One-Click Production Start (Windows)
-Simply run `start_production.bat`. This will:
-- Automatically install missing dependencies.
-- Set the environment to `production`.
-- Launch the high-concurrency **Waitress** WSGI server.
+### Prerequisites
+- Python 3.10+
+- pip
 
-### 2. Manual Startup
+### 1. Install Dependencies
 ```bash
 pip install -r requirements.txt
+```
+
+### 2. Run the Backend Server
+```bash
 cd backend
 python server.py
 ```
-Server runs on `http://localhost:5000`. Access the dashboard via `dashboard/index.html`.
+The FastAPI server starts on **`http://localhost:5000`**.
+
+- **Swagger UI (Interactive API Docs):** [http://localhost:5000/docs](http://localhost:5000/docs)
+- **ReDoc (API Reference):** [http://localhost:5000/redoc](http://localhost:5000/redoc)
+- **Health Check:** [http://localhost:5000/api/status](http://localhost:5000/api/status)
+
+### 3. Run the Frontend Dashboard
+Open `dashboard/index.html` directly in your browser:
+
+**Windows:**
+```cmd
+start dashboard\index.html
+```
+
+**macOS / Linux:**
+```bash
+open dashboard/index.html        # macOS
+xdg-open dashboard/index.html   # Linux
+```
+
+Or use a local HTTP server for best results:
+```bash
+cd dashboard
+python -m http.server 8080
+```
+Then open **`http://localhost:8080`** in your browser.
+
+### 4. One-Click Production Start (Windows)
+Simply double-click `start_production.bat`. This will:
+- Automatically install missing dependencies.
+- Launch the **Uvicorn** ASGI server on port 5000.
+
+---
+
+## 🔌 API Endpoints
+
+| Method | Endpoint              | Description                          |
+|--------|-----------------------|--------------------------------------|
+| `GET`  | `/api/status`         | Health check & record count          |
+| `POST` | `/api/sensor-data`    | Receive sensor reading from ESP32    |
+| `GET`  | `/api/sensor-data`    | Get recent readings (`?limit=N`)     |
+| `GET`  | `/api/sensor-data/all`| Get all readings for analysis        |
+| `GET`  | `/api/predict`        | Auto-predict congestion from history |
+| `POST` | `/api/predict/manual` | Predict from manual feature input    |
 
 ---
 
@@ -92,4 +137,3 @@ The system persists intelligence into `data/` including confusion matrices, clus
 
 ## 📄 License
 Production-grade prototype for intelligent urban infrastructure.
-

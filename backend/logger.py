@@ -8,7 +8,6 @@ def setup_logger(name="app_logger"):
     
     logger = logging.getLogger(name)
     logger.setLevel(logging.INFO)
-    
     # Prevent adding multiple handlers if setup is called multiple times
     if not logger.handlers:
         # Rotating File Handler (10 MB per file, max 5 backups)

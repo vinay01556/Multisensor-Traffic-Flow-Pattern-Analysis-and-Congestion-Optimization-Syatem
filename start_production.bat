@@ -10,12 +10,11 @@ echo [1/3] Checking dependencies...
 python -m pip install -r requirements.txt | findstr /V "already satisfied"
 
 echo [2/3] Setting Production Environment Variables...
-set FLASK_ENV=production
 set PORT=5000
 set HOST=0.0.0.0
 
-echo [3/3] Launching Waitress WSGI Server...
+echo [3/3] Launching Uvicorn ASGI Server...
 cd backend
-python server.py
+python -m uvicorn server:app --host %HOST% --port %PORT%
 
 pause
